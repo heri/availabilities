@@ -16,14 +16,47 @@ class EventTest < ActiveSupport::TestCase
     assert_equal 7, availabilities.length
   end
 
+  test 'no events' do
+    Event.destroy_all
+    availabilities = Event.availabilities DateTime.parse('2016-08-10')
+    availabilities.each do |a|
+      assert_equal [], a[:slots]
+    end
+  end
+
   test 'invalid date' do
-    # on met '2014-12-30' au lieu d'une date
+    # erreur si on met '2014-12-30' au lieu d'une date
     availabilities = Event.availabilities '2014-12-30'
     assert_equal Hash, availabilities.class
     assert_equal 'Invalid argument', availabilities[:errors][:base]
   end
 
-  test 'validations' do
+  # l'algorithme ne doit pas être changé par le changement d'heure d'été/hiver
+  # et aussi tiendre compte des années bissextiles 
+  test 'DST' do
+    Event.delete_all
+    # DST: changement d'heure d'été à hiver est le dimanche 26 Mars 2017 1:00AM
+    build_recurring('2017-03-24 09:30', '2017-03-24 10:30')
+    build_appointmt('2017-03-31 10:00', '2017-03-31 10:30')
+    availabilities = Event.availabilities DateTime.parse('2017-03-25')
+    assert_equal Date.new(2017, 3, 31), availabilities[6][:date]
+    assert_equal ['9:30'], availabilities[6][:slots]
+
+    Event.delete_all
+    # en 2017 28 février -> 1er Mars
+    availabilities = Event.availabilities DateTime.parse('2017-02-25')
+    assert_equal Date.new(2017, 3, 1), availabilities[4][:date]
+
+    # en 2016 29 février -> 1er Mars
+    availabilities = Event.availabilities DateTime.parse('2016-02-25')
+    assert_equal Date.new(2016, 3, 1), availabilities[5][:date]
+    
+    # en 2015 27 février -> 1er Mars
+    availabilities = Event.availabilities DateTime.parse('2015-02-25')
+    assert_equal Date.new(2015, 3, 1), availabilities[4][:date]
+  end
+
+  test 'validations starts and ends date' do
     Event.delete_all
     # duration should not be nil
     event = build_recurring('2014-08-04 09:30', '2014-08-04 09:30')
@@ -32,6 +65,16 @@ class EventTest < ActiveSupport::TestCase
 
     # event times are always :00 or :30
     event = build_recurring('2014-08-04 09:20', '2014-08-04 09:45')
+    assert_not event.valid?
+    assert_equal [:starts_at, :ends_at], event.errors.keys
+
+    # duration > 0
+    event = build_recurring('2014-08-04 09:30', '2014-08-04 09:00')
+    assert_not event.valid?
+    assert_equal [:starts_at], event.errors.keys
+    
+    # starts_at.wday != ends_at.wday
+    event = build_recurring('2014-08-04 09:30', '2014-08-03 09:30')
     assert_not event.valid?
     assert_equal [:starts_at, :ends_at], event.errors.keys
   end
