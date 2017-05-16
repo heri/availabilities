@@ -7,8 +7,9 @@ class Event < ActiveRecord::Base
   # Availabilities cache is cleared when an event is changed
   after_save { |_ev| Rails.cache.delete_matched 'avails/events' }
 
-  # Outputs availabilities for 7 days following give starts_at. 
+  # Outputs availabilities for 7 days following starts
   def self.availabilities(starts)
+    return { errors: { base: "Invalid argument"} } unless starts.instance_of? DateTime
     Rails.cache.fetch("#{starts.to_date}/avails/events", expires_in: 5.minutes) do
       opens = Event.where(weekly_recurring: true, kind: 'opening')
       ones = Event.where(weekly_recurring: false, kind: 'opening').at_week(starts)

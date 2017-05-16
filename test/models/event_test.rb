@@ -16,6 +16,13 @@ class EventTest < ActiveSupport::TestCase
     assert_equal 7, availabilities.length
   end
 
+  test 'invalid date' do
+    # on met '2014-12-30' au lieu d'une date
+    availabilities = Event.availabilities '2014-12-30'
+    assert_equal Hash, availabilities.class
+    assert_equal 'Invalid argument', availabilities[:errors][:base]
+  end
+
   test 'validations' do
     Event.delete_all
     # duration should not be nil
