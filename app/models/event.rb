@@ -18,7 +18,7 @@ class Event < ActiveRecord::Base
       (starts.to_date..(starts + 6).to_date).collect do |date|
         { 
           date: date, 
-          slots: (slots(opens, date) | slots(ones, date)) - slots(apps, date)
+          slots: sort_and_transform(((slots(opens, date) | slots(ones, date)) - slots(apps, date)))
         }
       end
     end
@@ -28,12 +28,16 @@ class Event < ActiveRecord::Base
 
   # finds timeslots gives a series of events and a weekday
   def self.slots(days, date)
-    days.to_a.inject([]) { |sum, day| sum + (day.starts_at.wday == date.wday ? fill(day.starts_at, day.ends_at).split(" ") : [])  }
+    days.to_a.inject([]) { |sum, day| sum + (day.starts_at.wday == date.wday ? fill(day.starts_at.seconds_since_midnight, day.ends_at.seconds_since_midnight).flatten.compact : []) }
   end
 
   # returns timeslots with 30mn steps given a starts and ends time
   def self.fill(starts, ends)
-    "#{starts.strftime('%-k:%M')} #{Event.fill(starts + 1800, ends)}" if starts < ends
+    [starts, Event.fill(starts + 1800, ends)] if starts < ends
+  end
+
+  def self.sort_and_transform(array)
+    array.sort.collect { |t| Time.at(t).utc.strftime("%-k:%M") }
   end
 
   # event validation

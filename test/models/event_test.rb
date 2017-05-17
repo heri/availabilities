@@ -83,37 +83,20 @@ class EventTest < ActiveSupport::TestCase
     # delete events from previous tests
     Event.delete_all
     build_recurring('2014-08-11 09:30', '2014-08-11 12:30')
-    build_recurring('2014-08-11 11:30', '2014-08-11 14:30')
+    build_recurring('2014-08-11 11:30', '2014-08-11 13:30')
+    # on rajoute une autre récurrence avant 9:30
+    build_recurring('2014-08-04 09:00', '2014-08-04 09:30')
+
     availabilities = Event.availabilities DateTime.parse('2014-08-10')
     # il ne devrait pas y avoir des slots dédoublés. Devrait aller jusqu'à 14h
-    assert_equal ['9:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00'], availabilities[1][:slots]
+    # les slots devraient aussi être dans l'ordre avec 9:00 en premier
+    assert_equal ['9:00', '9:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00'], availabilities[1][:slots]
 
     # + non recurring, + appointement, same day
     build_non_recurring('2014-08-11 14:30', '2014-08-11 15:30')
     build_appointmt('2014-08-11 10:30', '2014-08-11 14:30')
     added = Event.availabilities DateTime.parse('2014-08-10')
-    assert_equal ['9:30', '10:00', '14:30', '15:00'], added[1][:slots]
-  end
-
-  test 'different dates' do
-    Event.delete_all
-    build_recurring('2014-08-04 09:30', '2014-08-04 10:30')
-    build_recurring('2014-08-13 09:30', '2014-08-13 10:00')
-
-    # there should be slots on two different dates
-    availabilities = Event.availabilities DateTime.parse('2014-08-10')
-    assert_equal ['9:30', '10:00'], availabilities[1][:slots]
-    assert_equal ['9:30'], availabilities[3][:slots]
-  end
-
-  test 'appointement outside openings' do
-    Event.delete_all
-    build_recurring('2014-08-10 10:30', '2014-08-10 11:00')
-    build_appointmt('2014-08-11 10:30', '2014-08-11 11:30')
-
-    # appointements is outside availabilities, there should be no changes
-    availabilities = Event.availabilities DateTime.parse('2014-08-10')
-    assert_equal ['10:30'], availabilities[0][:slots]
+    assert_equal ['9:00', '9:30', '10:00', '14:30', '15:00'], added[1][:slots]
   end
 
   private
