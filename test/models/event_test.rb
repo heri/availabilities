@@ -40,6 +40,24 @@ class EventTest < ActiveSupport::TestCase
     assert_equal 48, availabilities[0][:slots].length
   end
 
+  # on ne tient pas compte des récurrences futures
+  test 'future recurrence' do
+    Event.delete_all
+    # 1er Mai est un lundi, récurrence 8 Mai aussi un lundi mais semaine d'après
+    build_recurring('2017-05-08 09:00', '2017-05-08 10:00')
+    availabilities = Event.availabilities DateTime.parse('2017-05-01')
+    assert_equal 0, availabilities[0][:slots].length
+    assert_equal [], availabilities[0][:slots]
+
+    # même test mais la récurrence est bien dans la même semaine
+    Event.delete_all
+    Rails.cache.clear
+    build_recurring('2017-05-01 09:00', '2017-05-01 10:00')
+    availabilities = Event.availabilities DateTime.parse('2017-05-01')
+    assert_equal 2, availabilities[0][:slots].length
+    assert_equal ['9:00', '9:30'], availabilities[0][:slots] 
+ end
+
   test 'invalid date' do
     # erreur si on met '2014-12-30' au lieu d'une date
     availabilities = Event.availabilities '2014-12-30'

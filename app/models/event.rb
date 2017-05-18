@@ -11,7 +11,7 @@ class Event < ActiveRecord::Base
   def self.availabilities(starts)
     return { errors: { base: "Invalid argument"} } unless starts.instance_of? DateTime
     Rails.cache.fetch("#{starts.to_date}/avails/events", expires_in: 5.minutes) do
-      opens = Event.where(weekly_recurring: true, kind: 'opening')
+      opens = Event.where(weekly_recurring: true, kind: 'opening').where('starts_at < ?', starts + 7)
       ones = Event.where(weekly_recurring: false, kind: 'opening').at_week(starts)
       apps = Event.where(kind: 'appointment').at_week(starts)
 
