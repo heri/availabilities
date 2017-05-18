@@ -24,6 +24,22 @@ class EventTest < ActiveSupport::TestCase
     end
   end
 
+  test '23:30 -> 24:00' do
+    Event.delete_all
+    # convention : une disponibilité jusqu'à la fin de la journée est marqué comme 23:59
+    build_recurring('2017-01-01 23:00', '2017-01-01 23:59')
+    availabilities = Event.availabilities DateTime.parse('2017-01-01')
+    assert_equal ['23:00', '23:30'], availabilities[0][:slots]
+    assert_equal 7, availabilities.length
+  end
+
+  test 'full day' do
+    Event.delete_all
+    build_recurring('2017-01-01 00:00', '2017-01-01 23:59')
+    availabilities = Event.availabilities DateTime.parse('2017-01-01')
+    assert_equal 48, availabilities[0][:slots].length
+  end
+
   test 'invalid date' do
     # erreur si on met '2014-12-30' au lieu d'une date
     availabilities = Event.availabilities '2014-12-30'
@@ -77,6 +93,11 @@ class EventTest < ActiveSupport::TestCase
     event = build_recurring('2014-08-04 09:30', '2014-08-03 09:30')
     assert_not event.valid?
     assert_equal [:starts_at, :ends_at], event.errors.keys
+
+    # ends_at at 23:59 is good
+    event = build_recurring('2015-08-04 23:30', '2015-08-04 23:59')
+    assert_not event.errors.keys.include?(:ends_at)
+    assert event.valid?
   end
 
   test 'overlapping' do

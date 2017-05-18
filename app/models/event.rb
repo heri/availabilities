@@ -45,7 +45,7 @@ class Event < ActiveRecord::Base
     errors.add(:starts_at, 'must be before ends date') if starts_at >= ends_at
     start, ends = starts_at.strftime('%M'), ends_at.strftime('%M')
     errors.add(:starts_at, 'must be 30mn steps') unless start == '00' or start == '30'
-    errors.add(:ends_at, 'must be 30mn steps') unless ends == '00' or ends == '30'
+    errors.add(:ends_at, 'must be 30mn steps') unless ends == '00' or ends == '30' or ends_at.strftime('%H:%M') == '23:59'
     errors.add(:ends_at, 'must be same day as starts_at') unless starts_at.wday == ends_at.wday
   end
 end
